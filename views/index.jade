@@ -34,84 +34,27 @@ block content
         #right-panel
           #conversation-wrapper
             ul#conversation
-              li
-                .message.incomingMessage
-                  img(src='/images/dexter.jpg')
-                  .messagetext
-                    strong.username Peter:
-                    ul.messages
-                      li
-                        p Hi, how are you?
-                      li
-                        p Because I'm fine.
-                      li
-                        p This list is awesome!
-                    p.time 07:49pm
-              li
-                .message.outgoingMessage
-                  img(src='/images/dexter.jpg')
-                  .messagetext
-                    strong.username Peter:
-                    ul.messages
-                      li
-                        p Hi, how are you?
-                      li
-                        p Because I'm fine.
-                      li
-                        p This list is sick!
-                    p.time 07:49pm
-              li
-                .message.incomingMessage
-                  img(src='/images/dexter.jpg')
-                  .messagetext
-                    strong.username Peter:
-                    ul.messages
-                      li
-                        p Hi, how are you?
-                      li
-                        p Because I'm fine.
-                      li
-                        p This list is awesome!
-                    p.time 07:49pm
-              li
-                .message.outgoingMessage
-                  img(src='/images/dexter.jpg')
-                  .messagetext
-                    strong.username Peter:
-                    ul.messages
-                      li
-                        p Hi, how are you?
-                      li
-                        p Because I'm fine.
-                      li
-                        p This list is sick!
-                    p.time 07:49pm
-              li
-                .message.incomingMessage
-                  img(src='/images/dexter.jpg')
-                  .messagetext
-                    strong.username Peter:
-                    ul.messages
-                      li
-                        p Hi, how are you?
-                      li
-                        p Because I'm fine.
-                      li
-                        p This list is awesome!
-                    p.time 07:49pm
-              li
-                .message.outgoingMessage
-                  img(src='/images/dexter.jpg')
-                  .messagetext
-                    strong.username Peter:
-                    ul.messages
-                      li
-                        p Hi, how are you?
-                      li
-                        p Because I'm fine.
-                      li
-                        p This list is sick!
-                    p.time 07:49pm
+              - each message in messages
+                li
+                  - if (user_id==message.sender)
+                    .message.outgoingMessage
+                      img(src="/images/userimages/"+message.receiver+".jpg")
+                      .messagetext                    
+                        strong.username= message.receiver
+                        ul.messages
+                          li
+                            p= message.text
+                        p.time= message.created_at
+                  - else
+                    .message.incomingMessage
+                      img(src="/images/userimages/"+message.receiver+".jpg")
+                      .messagetext                    
+                        strong.username= message.receiver
+                        ul.messages
+                          li
+                          p= message.text
+                        p.time= message.created_at
+                        
           // Chatinput 
           #chatinput-wrapper
             input#chatinput-js
