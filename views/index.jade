@@ -1,0 +1,121 @@
+extends layout
+
+block content
+    #wrapper 
+      #header
+        h1 Chat
+        #settings-wrapper
+          a(href='#')
+            img#settingsIcon(src='/images/icons/settings.png')
+          #settingsMenu
+            div
+              img(src='/images/dexter.jpg')
+              | This is text
+      #mainframe
+        // Contactlist 
+        #left-panel
+          #searchuser-wrapper
+            #searchIcon-wrapper
+              img(src='/images/icons/search.png')
+            #searchInput-wrapper
+              input#searchInput-js
+            #addUser-wrapper
+              a#addUser-js.tooltip(href='javascript:;', data-tip='Add User')
+          #contactlist-wrapper
+            ul#contactlist
+              - each user in users
+                li(id="uid"+user._id).online
+                  img(src="/images/userimages/"+user._id+".jpg")
+                  .userinfo
+                    strong.username= user.username
+                    p.availability • Online            
+
+        // Chatwindow 
+        #right-panel
+          #conversation-wrapper
+            ul#conversation
+              li
+                .message.incomingMessage
+                  img(src='/images/dexter.jpg')
+                  .messagetext
+                    strong.username Peter:
+                    ul.messages
+                      li
+                        p Hi, how are you?
+                      li
+                        p Because I'm fine.
+                      li
+                        p This list is awesome!
+                    p.time 07:49pm
+              li
+                .message.outgoingMessage
+                  img(src='/images/dexter.jpg')
+                  .messagetext
+                    strong.username Peter:
+                    ul.messages
+                      li
+                        p Hi, how are you?
+                      li
+                        p Because I'm fine.
+                      li
+                        p This list is sick!
+                    p.time 07:49pm
+              li
+                .message.incomingMessage
+                  img(src='/images/dexter.jpg')
+                  .messagetext
+                    strong.username Peter:
+                    ul.messages
+                      li
+                        p Hi, how are you?
+                      li
+                        p Because I'm fine.
+                      li
+                        p This list is awesome!
+                    p.time 07:49pm
+              li
+                .message.outgoingMessage
+                  img(src='/images/dexter.jpg')
+                  .messagetext
+                    strong.username Peter:
+                    ul.messages
+                      li
+                        p Hi, how are you?
+                      li
+                        p Because I'm fine.
+                      li
+                        p This list is sick!
+                    p.time 07:49pm
+              li
+                .message.incomingMessage
+                  img(src='/images/dexter.jpg')
+                  .messagetext
+                    strong.username Peter:
+                    ul.messages
+                      li
+                        p Hi, how are you?
+                      li
+                        p Because I'm fine.
+                      li
+                        p This list is awesome!
+                    p.time 07:49pm
+              li
+                .message.outgoingMessage
+                  img(src='/images/dexter.jpg')
+                  .messagetext
+                    strong.username Peter:
+                    ul.messages
+                      li
+                        p Hi, how are you?
+                      li
+                        p Because I'm fine.
+                      li
+                        p This list is sick!
+                    p.time 07:49pm
+          // Chatinput 
+          #chatinput-wrapper
+            input#chatinput-js
+      // Scripts 
+      script(src='/javascripts/lib/jquery-1.7.2.min.js', type='text/javascript')
+      script(src='/javascripts/client.js', type='text/javascript')
+      script(src='/javascripts/script.js', type='text/javascript')
