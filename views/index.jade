@@ -23,7 +23,7 @@ block content
               a#addUser-js.tooltip(href='javascript:;', data-tip='Add User')
           #contactlist-wrapper
             ul#contactlist
-              - each user in users
+              - each user in contacts
                 li(id="uid"+user._id).online
                   img(src="/images/userimages/"+user._id+".jpg")
                   .userinfo
@@ -52,7 +52,7 @@ block content
                         strong.username= message.receiver
                         ul.messages
                           li
-                          p= message.text
+                            p= message.text
                         p.time= message.created_at
                         
           // Chatinput 

@@ -31,7 +31,7 @@ body{font-family:"Helvetica neue",Helvetica,Arial,sans-serif;font-size:13px;back
 #conversation{list-style:none;}#conversation ul li:last-child{border:5px;}
 #conversation .message{display:block;width:100%;padding:16px;overflow:auto;}#conversation .message img{height:40px;width:40px;box-shadow:1px 2px 2px #ddd;border:1px solid #fff;}
 #conversation .message .messagetext{margin:-4px 16px;display:inline-block;}#conversation .message .messagetext .username{font-size:11px;font-weight:bold;text-shadow:1px 1px 0px #ccc;}
-#conversation .message .messagetext .messages{margin-top:6px;list-style-type:none;}#conversation .message .messagetext .messages p{font-size:13px;}
+#conversation .message .messagetext .messages{margin-top:6px;list-style-type:none;}#conversation .message .messagetext .messages p{font-size:13px;line-height:16px;}
 #conversation .message .messagetext .time{margin-top:6px;font-size:10px;color:#aaa;}
 #conversation .outgoingMessage{background-color:#fff;float:left;text-align:left;border-top:1px solid #ddd;border-bottom:1px solid #ddd;}#conversation .outgoingMessage img{float:left;}
 #conversation .outgoingMessage .messagetext{text-align:left;}

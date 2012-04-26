@@ -1,17 +1,20 @@
-jQuery(document).ready(function() {
+$(document).ready(function() {
 
-	var uid = 1;
-	var contact = null;
+	// Global variables
+	uid = 1;
+	contact = null;
+	contact = 2;
 
 	// On startup
 	$("#mainframe").css('height', $('#wrapper').outerHeight() - $('#header').outerHeight());
 	$("#contactlist-wrapper").css('height', $('#left-panel').outerHeight() - $('#searchuser-wrapper').outerHeight());
 	$("#conversation-wrapper").css('height', $('#right-panel').outerHeight() - $('#chatinput-wrapper').outerHeight());
 	scrollChat();
+	$("input#chatinput-js").focus();
 
 	// Testing
-	incrementUnreadCount(123);
-	incrementUnreadCount(123);
+	incrementUnreadCount(3);
+	incrementUnreadCount(4);
 
 	// functions
 	//$('#settingsMenu').css('right','-1px');	//TODO
@@ -120,25 +123,25 @@ jQuery(document).ready(function() {
 		window.contact = contact;
 	}
 
-	function addMessage(value, contact, time) {
+
+	window.addMessage = function(value, contact, time) {
 
 		// TODO add notification if contact is not being displayed
-
 		var lastMessage = $('.message').last();
-		if( uid = contact) {// outgoing
-			if(!lastMessage.hasClass('outgoingMessage')) {
-				// Create message thread
-				var newMessage = $('<li></li>');
-				li.html('<div class=".message .outgoingMessage"><img src="img/userpic' + contact + '.jpg"><div class="messagetext"><strong class="username">' + contact + '</strong><ul class="messages"></ul><p class="time"></p></div>');
-				$('#conversation ul').append(newMessage);
-				lastMessage = $('.message').last();
-			}
-		} else {// incoming
+		if(uid == contact) {// incoming
 			if(!lastMessage.hasClass('incomingMessage')) {
 				// Create message thread
 				var newMessage = $('<li></li>');
-				li.html('<div class=".message .incomingMessage"><img src="img/userpic' + contact + '.jpg"><div class="messagetext"><strong class="username">' + contact + '</strong><ul class="messages"></ul><p class="time"></p></div>');
+				newMessage.html('<div class="message incomingMessage"><img src="images/userimages/' + contact + '.jpg"><div class="messagetext"><strong class="username">' + contact + '</strong><ul class="messages"></ul><p class="time"></p></div>');
 				$('#conversation ul').append(newMessage);
+				lastMessage = $('.message').last();
+			}
+		} else {// outgoing
+			if(!lastMessage.hasClass('outgoingMessage')) {
+				// Create message thread
+				var newMessage = $('<li></li>');
+				newMessage.html('<div class="message outgoingMessage"><img src="images/userimages/' + contact + '.jpg"><div class="messagetext"><strong class="username">' + contact + '</strong><ul class="messages"></ul><p class="time"></p></div>');
+				$('ul#conversation').append(newMessage);
 				lastMessage = $('.message').last();
 			}
 		}
@@ -146,15 +149,13 @@ jQuery(document).ready(function() {
 		var li = $('<li></li>');
 		li.html('<p>' + value + '</p>');
 
-		$(lastMessage).children('ul').append(li);
+		$(lastMessage).find('.messages').append(li);
 		// Add message
-		$(lastMessage).children('.time').html(time);
+		$(lastMessage).find('.time').html(new Date().getTime());
 		// Update time
 		scrollChat();
 	}
-
 	// chatinput control
-
 	$("#chatinput-js").keydown(function(e) {
 		if(e.keyCode == 13) {
 			value = $("#chatinput-js").val();
