@@ -2,6 +2,7 @@
 "use strict";
 
 var webServerPort = 3000;
+var uid = "4fa265d5e71fece1609a555c";
 
 /**
  * Webserver
@@ -36,25 +37,30 @@ chat.configure(function() {
 	}));
 });
 
-chat.configure('development', function() {
-	chat.use(express.errorHandler());
+chat.configure('development', function(){
+  chat.use(express.errorHandler({ dumpExceptions: true, showStack: true })); 
 });
+
+chat.configure('production', function(){
+  chat.use(express.errorHandler()); 
+});
+
 // Data providers
 var UserProvider = require('./userprovider-memory').UserProvider;
-var userProvider = new UserProvider();
+var userProvider = new UserProvider('localhost', 27017);
 
 var MessageProvider = require('./messageprovider-memory').MessageProvider;
-var messageProvider = new MessageProvider();
+var messageProvider = new MessageProvider('localhost', 27017);
 
 //TODO: Export routes to routes directory
 chat.get('/', function(req, res) {
-	userProvider.findContacts(1,function(error, contacts) {
+	userProvider.findContacts(uid,function(error, contacts) {
 		console.log('contacts:'+contacts);
 		var messages = messageProvider.findAll(function(error, messages) {
 			console.log(contacts);
 			res.render('index.jade', {
 				title : 'Chat',
-				user_id : 1,
+				user_id : uid,
 				contacts : contacts,
 				messages : messages
 			});
@@ -67,28 +73,20 @@ chat.post('/', function(req, res) {
 		var messages = messageProvider.findAll(function(error, messages) {
 			res.render('index.jade', {
 				title : 'Chat',
-				user_id : 1,
+				user_id : uid,
 				users : users,
 				messages : messages
 			});
 		});
 	});
 });
-// Routing
-/*chat.get('/', routes.index);
- chat.get('/login', function(req, res) {
- res.send('Hello Login2');
- });
- chat.get('/register', routes.register);*/
+
 
 http.createServer(chat).listen(webServerPort, function() {
 	console.log("Webserver is listening on port " + webServerPort);
 });
 // Port where we'll run the websocket server
 var webSocketsServerPort = 8000;
-
-var history = [];
-var clients = [];
 
 // Helper function for escaping input strings
 function htmlEntities(str) {
@@ -116,8 +114,7 @@ wsServer.on('request', function(request) {
 	// client is connecting from your website
 	// (http://en.wikipedia.org/wiki/Same_origin_policy)
 	var connection = request.accept(null, request.origin);
-
-	var uid = null;
+	clients[uid] = connection;
 
 	console.log((new Date()) + ' Connection accepted.');
 
@@ -129,13 +126,7 @@ wsServer.on('request', function(request) {
 	// user sent some message
 	connection.on('message', function(message) {
 
-		if(message.type === 'utf8') {// accept only text
-			if(uid == null) {
-				// we need to know client index to remove them on 'close' event
-				uid = Math.floor(Math.random() * 101);
-				clients[uid] = connection;
-				// TODO: Removed -1
-			}
+		if(message.type === 'utf8') { // accept only text
 
 			try {
 				var incoming = JSON.parse(message.utf8Data);

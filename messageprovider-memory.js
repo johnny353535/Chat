@@ -1,46 +1,95 @@
-var messageCounter = 1;
+var Db = require('mongodb').Db;
+var Connection = require('mongodb').Connection;
+var Server = require('mongodb').Server;
+var BSON = require('mongodb').BSON;
+var ObjectID = require('mongodb').ObjectID;
 
-MessageProvider = function(){};
-MessageProvider.prototype.dummyData = [];
+MessageProvider = function(host, port) {
+	this.db = new Db('chat', new Server(host, port, {
+		auto_reconnect : true
+	}, {}));
+	this.db.open(function() {
+		console.log("Messageprovider connected to the database ("+host+":"+port+"/chat)");
+	});
+};
+
+MessageProvider.prototype.getCollection = function(callback) {
+	this.db.collection('messages', function(error, message_collection) {
+		if(error)
+			callback(error);
+		else
+			callback(null, message_collection);
+	});
+};
 
 MessageProvider.prototype.findAll = function(callback) {
-  callback( null, this.dummyData )
+	this.getCollection(function(error, message_collection) {
+		if(error)
+			callback(error)
+		else {
+			message_collection.find().toArray(function(error, results) {
+				if(error)
+					callback(error)
+				else
+					callback(null, results)
+			});
+		}
+	});
 };
 
 MessageProvider.prototype.findById = function(id, callback) {
-  var result = null;
-  for(var i =0;i<this.dummyData.length;i++) {
-    if( this.dummyData[i]._id == id ) {
-      result = this.dummyData[i];
-      break;
-    }
-  }
-  callback(null, result);
+	this.getCollection(function(error, message_collection) {
+		if(error)
+			callback(error)
+		else {
+			message_collection.findOne({
+				_id : message_collection.db.bson_serializer.ObjectID.createFromHexString(id)
+			}, function(error, result) {
+				if(error)
+					callback(error)
+				else
+					callback(null, result)
+			});
+		}
+	});
 };
 
 MessageProvider.prototype.save = function(messages, callback) {
-  var message = null;
+	var message = null;
 
-  if( typeof(messages.length)=="undefined")
-    messages = [messages];
+	if( typeof (messages.length) == "undefined")
+		messages = [messages];
 
-  for( var i =0;i< messages.length;i++ ) {
-    message = messages[i];
-    message._id = messageCounter++;
-    message.created_at = new Date();
+	for(var i = 0; i < messages.length; i++) {
+		message = messages[i];
+		message._id = messageCounter++;
+		message.created_at = new Date();
 
-    this.dummyData[this.dummyData.length]= message;
-  }
-  callback(null, messages);
+		this.dummyData[this.dummyData.length] = message;
+	}
+	callback(null, messages);
 };
 
-/* Lets bootstrap with dummy data */
-new MessageProvider().save([
-  {text: 'Hello', sender: 1, receiver: 2, delivered: true},
-  {text: 'Hi!', sender: 2, receiver: 1, delivered: true},
-  {text: 'How are you', sender: 2, receiver: 1, delivered: true},
-  {text: 'I\'m fine', sender: 1, receiver: 2, delivered: false},
-  {text: 'And you?', sender: 4, receiver: 3, delivered: true}
-], function(error, messages){});
+MessageProvider.prototype.save = function(messages, callback) {
+	this.getCollection(function(error, message_collection) {
+		if(error)
+			callback(error)
+		else {
+			if( typeof (messages.length) == "undefined")
+				messages = [messages];
+
+			for(var i = 0; i < messages.length; i++) {
+				message = messages[i];
+				message._id = messageCounter++;
+				message.created_at = new Date();
+
+			}
+
+			message_collection.insert(messages, function() {
+				callback(null, messages);
+			});
+		}
+	});
+};
 
 exports.MessageProvider = MessageProvider;
