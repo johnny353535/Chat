@@ -9,7 +9,7 @@ block content
             img#settingsIcon(src='/images/icons/settings.png')
           #settingsMenu
             div
-              img(src='/images/dexter.jpg')
+              img(src="/images/userimages/"+user._id+".jpg")
               | This is text
       #mainframe
         // Contactlist 
@@ -34,26 +34,6 @@ block content
         #right-panel
           #conversation-wrapper
             ul#conversation
-              - each message in messages
-                li
-                  - if (user_id==message.sender)
-                    .message.outgoingMessage
-                      img(src="/images/userimages/"+message.receiver+".jpg")
-                      .messagetext                    
-                        strong.username= message.receiver
-                        ul.messages
-                          li
-                            p= message.text
-                        p.time= message.created_at
-                  - else
-                    .message.incomingMessage
-                      img(src="/images/userimages/"+message.receiver+".jpg")
-                      .messagetext                    
-                        strong.username= message.receiver
-                        ul.messages
-                          li
-                            p= message.text
-                        p.time= message.created_at
                         
           // Chatinput 
           #chatinput-wrapper

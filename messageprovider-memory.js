@@ -9,7 +9,7 @@ MessageProvider = function(host, port) {
 		auto_reconnect : true
 	}, {}));
 	this.db.open(function() {
-		console.log("Messageprovider connected to the database ("+host+":"+port+"/chat)");
+		console.log("Messageprovider connected to the database (" + host + ":" + port + "/chat)");
 	});
 };
 
@@ -37,38 +37,34 @@ MessageProvider.prototype.findAll = function(callback) {
 	});
 };
 
-MessageProvider.prototype.findById = function(id, callback) {
+// Get conversation between user and contact
+MessageProvider.prototype.getConversation = function(userId, contactId, callback) {
 	this.getCollection(function(error, message_collection) {
+		console.log("History request ("+userId+", "+contactId+")");
+		var userIdHex = message_collection.db.bson_serializer.ObjectID.createFromHexString(userId);
+		var contactIdHex = message_collection.db.bson_serializer.ObjectID.createFromHexString(contactId);
+
 		if(error)
 			callback(error)
 		else {
-			message_collection.findOne({
-				_id : message_collection.db.bson_serializer.ObjectID.createFromHexString(id)
-			}, function(error, result) {
+			message_collection.find({
+				$or : [{
+					sender : userIdHex, receiver: contactIdHex
+				}, {
+					sender : contactIdHex, receiver: userIdHex
+				}]
+			}).toArray(function(error, results) {
+				console.log(results);
 				if(error)
 					callback(error)
 				else
-					callback(null, result)
+					callback(null, results)
 			});
 		}
 	});
 };
 
-MessageProvider.prototype.save = function(messages, callback) {
-	var message = null;
 
-	if( typeof (messages.length) == "undefined")
-		messages = [messages];
-
-	for(var i = 0; i < messages.length; i++) {
-		message = messages[i];
-		message._id = messageCounter++;
-		message.created_at = new Date();
-
-		this.dummyData[this.dummyData.length] = message;
-	}
-	callback(null, messages);
-};
 
 MessageProvider.prototype.save = function(messages, callback) {
 	this.getCollection(function(error, message_collection) {
@@ -80,7 +76,6 @@ MessageProvider.prototype.save = function(messages, callback) {
 
 			for(var i = 0; i < messages.length; i++) {
 				message = messages[i];
-				message._id = messageCounter++;
 				message.created_at = new Date();
 
 			}

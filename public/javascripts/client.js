@@ -8,7 +8,7 @@ $(document).ready(function() {"use strict";
 	// if browser doesn't support WebSocket, just show some notification and exit
 	if(!window.WebSocket) {
 		content.html($('<p>', {
-			text : 'Sorry, but your browser doesn\'t ' + 'support WebSockets.'
+			text : 'Sorry, but your browser doesn\'t support WebSockets.'
 		}));
 		input.hide();
 		$('span').hide();
@@ -19,12 +19,13 @@ $(document).ready(function() {"use strict";
 	var connection = new WebSocket('ws://localhost:8000');
 
 	connection.onopen = function() {
+		requestHistory();
 	};
 
 	connection.onerror = function(error) {
-		// just in there were some problems with conenction...
+		// just in there were some problems with connection...
 		content.html($('<p>', {
-			text : 'Sorry, but there\'s some problem with your ' + 'connection or the server is down.</p>'
+			text : 'Sorry, but there\'s some problem with your connection or the server is down.</p>'
 		}));
 	};
 	// most important part - incoming messages
@@ -41,36 +42,49 @@ $(document).ready(function() {"use strict";
 
 		// NOTE: if you're not sure about the JSON structure
 		// check the server source code above
-		if(json.type === 'history') {// entire message history
-			// insert every single message to the chat window
-			for(var i = 0; i < json.data.length; i++) {
-				addMessage(json.data[i].text, json.data[i].author, new Date(json.data[i].time));
-			}
-		} else if(json.type === 'message') {// it's a single message
+		if(json.type === 'message') {// it's a single message
 			input.removeAttr('disabled');
 			// let the user write another message
-			addMessage(json.data.text, json.data.author, new Date(json.data.time));
+			newMessage(json.data.text, json.data.author, new Date(json.data.time));
+		} else if(json.type === 'history') {
+			for(var i=0; i<json.data.length; i++){
+				addMessage(json.data[i].text, json.data[i].sender, new Date(json.data[i].time));
+			}
 		} else {
 			console.log('Hmm..., I\'ve never seen JSON like this: ', json);
 		}
 	};
 	/**
-	 * Send mesage when user presses Enter key
+	 * Send message when user presses Enter key
 	 */
-	window.sendMessage = function(msg, receiver) {
+	window.sendMessage = function(msg) {
 		// send the message as JSON
 		var obj = {
 			type : 'message',
 			text : msg,
-			receiver : contact
+			receiver : contactId
 		};
 
 		var outgoing = JSON.stringify(obj);
-		
-		console.log('send: '+outgoing);
-		
 		connection.send(outgoing);
+		console.log('sendMessage: '+outgoing);
 	}
+	
+	/**
+	 * Request the history
+	 */
+	window.requestHistory = function() {
+		// send the message as JSON
+		var obj = {
+			type : 'historyRequest',
+			contactId : contactId
+		};
+
+		var outgoing = JSON.stringify(obj);
+		connection.send(outgoing);
+		console.log('requestedHistory: '+obj.contactId);
+	}
+	
 	/**
 	 * This method is optional. If the server wasn't able to respond to the
 	 * in 3 seconds then show some error message to notify the user that
@@ -79,7 +93,7 @@ $(document).ready(function() {"use strict";
 	setInterval(function() {
 		if(connection.readyState !== 1) {
 			status.text('Error');
-			input.attr('disabled', 'disabled').val('Unable to communicate ' + 'with the WebSocket server.');
+			input.attr('disabled', 'disabled').val('Unable to communicate with the WebSocket server.');
 		}
 	}, 3000);
 });
