@@ -1,21 +1,20 @@
 $(document).ready(function() {
 
 	// Global variables
-	userId = "4fa2cb485c82cece2f9ff0fe";
-	userName = "Fritz";
-	contactId = "4fa3a705db3071d1db173fe0";
-	contactName = "Hubert";
-	userId = "4fa3a705db3071d1db173fe0";
-	userName = "Hubert";
-	contactId = "4fa2cb485c82cece2f9ff0fe";
-	contactName = "Fritz";
+	userId = $("#userId").val();
+	userName = $("#userName").val();
+	
+	contactId = null;
+	contactName = null;
+	
+	console.log("User: "+userId+" ("+userName+")");
 
 	// On startup
 	$("#mainframe").css('height', $('#wrapper').outerHeight() - $('#header').outerHeight());
 	$("#contactlist-wrapper").css('height', $('#left-panel').outerHeight() - $('#searchuser-wrapper').outerHeight());
 	$("#conversation-wrapper").css('height', $('#right-panel').outerHeight() - $('#chatinput-wrapper').outerHeight());
-	scrollChat();
-	$("input#chatinput-js").focus();
+	$('#contactlist').change();
+	$('input#chatinput-js').attr('disabled','disabled').val('Please select a user or add a user to your contactlist.');
 
 	// functions
 	//$('#settingsMenu').css('right','-1px');	//TODO
@@ -73,20 +72,19 @@ $(document).ready(function() {
 			mylist.append(itm);
 		});
 	});
-
-	$('#contactlist').change();
-	$('#contactlist li:first-child').addClass('selected');
-
+	
 	// set users availability
-	// @status: 0=offline, 1=offline
-	function setAvailability(userId, status) {
-		element = $("#contactlist #uid" + userId);
-		if(status == 0) {
-			element.removeClass('online');
-			element.addClass('offline');
-		} else if(status == 1) {
+	window.setAvailability = function (contactId, available) {
+		console.log(contactId+" is "+available);
+		element = $("#contactlist #uid" + contactId);
+		if(available) {
 			element.removeClass('offline');
+			element.html('online');
 			element.addClass('online');
+		} else {
+			element.removeClass('online');
+			element.html('offline');
+			element.addClass('offline');
 		}
 
 		$('#contactlist').change();
@@ -94,12 +92,12 @@ $(document).ready(function() {
 	}
 
 	// set unread count
-	function incrementUnreadCount(userId) {
-		element = $("#contactlist #uid" + userId + " .unreadCounter");
+	function incrementUnreadCount(receiver) {
+		var element = $("#contactlist #uid" + receiver + " .unreadCounter");
 
 		// If elment doesn't exist add the counter
 		if(element.length == 0) {
-			$("#contactlist #uid" + userId).append('<div class="unreadCounter">1</div>');
+			$("#contactlist #uid" + receiver).append('<div class="unreadCounter">1</div>');
 			//$("#contactlist #uid"+uid+" .unreadCounter").effect("bounce", { times:3 }, 300);
 		} else {
 			currentCount = parseInt(element.text(), 10);
@@ -113,28 +111,36 @@ $(document).ready(function() {
 		$(this).addClass('selected');
 		$(".unreadCounter", this).remove();
 		// remove unread counter
+		
+		$('input#chatinput-js').removeAttr('disabled').val('');
+		$("input#chatinput-js").focus();
 
-		window.contactId = $(this).attr('id').substring(4, $(this).attr('id').length);
+		window.contactId = $(this).attr('id').substring(3, $(this).attr('id').length);
 		window.contactName = $(this).find('.username').html();
+		$("ul#conversation").html('');
 		console.log('Contact changed to ' + contactName + ' (' + contactId + ')');
+		requestHistory();
 	});
+	
+	
 	// display conversation
-
-	window.newMessage = function(value, contactId, date) {
-		if(contactId == contactId)
-			addMessage(text, contactId, date);
-		else
-			incrementUnreadCount(contactId);
+	window.newMessage = function(text, sender, date) {
+		console.log("Sender: " + sender + " contactId: " + contactId + " userId:"+userId+" at "+date);
+		if(sender == contactId || sender==userId){
+			console.log("currentConversation");
+			addMessage(text, sender, date);
+		} else {
+			console.log("notCurrentConversation");
+			incrementUnreadCount(sender);
+		}
 	}
-	function addMessage(text, date) {
-
-		// TODO add notification if contact is not being displayed
+	function addMessage(text, sender, date) {
 		var lastMessage = $('.message').last();
-		if(userId == contactId) {// incoming
+		if(sender == contactId) {// incoming
 			if(!lastMessage.hasClass('incomingMessage')) {
 				// Create message thread
 				var newMessage = $('<li></li>');
-				newMessage.html('<div class="message incomingMessage"><img src="images/userimages/' + contactId + '.jpg"><div class="messagetext"><strong class="username">' + contactName + '</strong><ul class="messages"></ul><p class="time"></p></div>');
+				newMessage.html('<div class="message incomingMessage"><img src="images/userimages/' + contactId + '.jpg" alt="userimage' + contactName + '"><div class="messagetext"><strong class="username">' + contactName + '</strong><ul class="messages"></ul><p class="time"></p></div>');
 				$('#conversation ul').append(newMessage);
 				lastMessage = $('.message').last();
 			}
@@ -142,7 +148,7 @@ $(document).ready(function() {
 			if(!lastMessage.hasClass('outgoingMessage')) {
 				// Create message thread
 				var newMessage = $('<li></li>');
-				newMessage.html('<div class="message outgoingMessage"><img src="images/userimages/' + userId + '.jpg"><div class="messagetext"><strong class="username">' + userName + '</strong><ul class="messages"></ul><p class="time"></p></div>');
+				newMessage.html('<div class="message outgoingMessage"><img src="images/userimages/' + userId + '.jpg" alt="userimage' + userName + '"><div class="messagetext"><strong class="username">' + userName + '</strong><ul class="messages"></ul><p class="time"></p></div>');
 				$('ul#conversation').append(newMessage);
 				lastMessage = $('.message').last();
 			}
@@ -156,6 +162,8 @@ $(document).ready(function() {
 		var formattedDate = '';
 		// TODO: leading zeros when time is e.g. 09:02
 		var now = new Date();
+
+		console.log(date);
 
 		if(date.toDateString() == now.toDateString()) {// If today: only show time
 			formattedDate = date.getHours() + ':' + date.getMinutes();
@@ -171,18 +179,18 @@ $(document).ready(function() {
 	}
 
 	// chatinput control
-	$("#chatinput-js").keydown(function(e) {
+	$("input#chatinput-js").keydown(function(e) {
 		if(e.keyCode == 13) {
-			value = $("#chatinput-js").val();
+			value = $("input#chatinput-js").val();
 
 			if(value != '') {
 
 				sendMessage(value, contactId);
 				// send message to server
-				addMessage(value, new Date());
+				addMessage(value, userId, new Date());
 				// display message
 
-				$("#chatinput-js").val('');
+				$("input#chatinput-js").val('');
 				// empty input
 			}
 		}

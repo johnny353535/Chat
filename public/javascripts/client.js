@@ -1,11 +1,11 @@
 $(document).ready(function() {"use strict";
 
-	// for better performance - to avoid searching in DOM
+	// Partly: http://gist.github.com/2031681
+
 	var content = $('#conversation-wrapper');
 	var input = $('#chatinput-js');
-	var status = $('#status');
 
-	// if browser doesn't support WebSocket, just show some notification and exit
+	// If the browser doesn't support websockets
 	if(!window.WebSocket) {
 		content.html($('<p>', {
 			text : 'Sorry, but your browser doesn\'t support WebSockets.'
@@ -15,24 +15,22 @@ $(document).ready(function() {"use strict";
 		return;
 	}
 
-	// open connection
+	// Create a new connection
 	var connection = new WebSocket('ws://localhost:8000');
 
 	connection.onopen = function() {
-		requestHistory();
 	};
 
+	// Display error, if an error occurs
 	connection.onerror = function(error) {
-		// just in there were some problems with connection...
 		content.html($('<p>', {
-			text : 'Sorry, but there\'s some problem with your connection or the server is down.</p>'
+			text : 'The connection couldn\'t be established or the server is down.</p>'
 		}));
 	};
-	// most important part - incoming messages
+	
+	// Incoming message
 	connection.onmessage = function(message) {
-		// try to parse JSON message. Because we know that the server always returns
-		// JSON this should work without any problem but we should make sure that
-		// the massage is not chunked or otherwise damaged.
+		// The server always sends JSON
 		try {
 			var json = JSON.parse(message.data);
 		} catch (e) {
@@ -40,23 +38,25 @@ $(document).ready(function() {"use strict";
 			return;
 		}
 
-		// NOTE: if you're not sure about the JSON structure
-		// check the server source code above
-		if(json.type === 'message') {// it's a single message
+		// The type field defines the kind of message
+		if(json.type === 'message') { // A single message
 			input.removeAttr('disabled');
 			// let the user write another message
-			newMessage(json.data.text, json.data.author, new Date(json.data.time));
-		} else if(json.type === 'history') {
-			for(var i=0; i<json.data.length; i++){
-				addMessage(json.data[i].text, json.data[i].sender, new Date(json.data[i].time));
+			newMessage(json.data.text, json.data.sender, new Date(json.data.time));
+		} else if(json.type === 'history') { // The server sends the history of the conversation
+			console.log("Received history");
+			for(var i = 0; i < json.data.length; i++) {
+				newMessage(json.data[i].text, json.data[i].sender, new Date(json.data[i].time));
 			}
+		} else if(json.type === 'availability') {
+			setAvailability(json.data.contactId,json.data.availability);
 		} else {
-			console.log('Hmm..., I\'ve never seen JSON like this: ', json);
+			console.log('Unknown JSON message type: ', json);
 		}
 	};
-	/**
-	 * Send message when user presses Enter key
-	 */
+	
+
+	// Send message when user presses Enter key
 	window.sendMessage = function(msg) {
 		// send the message as JSON
 		var obj = {
@@ -67,12 +67,10 @@ $(document).ready(function() {"use strict";
 
 		var outgoing = JSON.stringify(obj);
 		connection.send(outgoing);
-		console.log('sendMessage: '+outgoing);
+		console.log('sendMessage: ' + outgoing);
 	}
-	
-	/**
-	 * Request the history
-	 */
+
+	// Request the history
 	window.requestHistory = function() {
 		// send the message as JSON
 		var obj = {
@@ -82,17 +80,12 @@ $(document).ready(function() {"use strict";
 
 		var outgoing = JSON.stringify(obj);
 		connection.send(outgoing);
-		console.log('requestedHistory: '+obj.contactId);
+		console.log('requestedHistory: ' + obj.contactId);
 	}
-	
-	/**
-	 * This method is optional. If the server wasn't able to respond to the
-	 * in 3 seconds then show some error message to notify the user that
-	 * something is wrong.
-	 */
+
+	// If the server doesn't respond for 3 seconds a error message is being displayed
 	setInterval(function() {
 		if(connection.readyState !== 1) {
-			status.text('Error');
 			input.attr('disabled', 'disabled').val('Unable to communicate with the WebSocket server.');
 		}
 	}, 3000);

@@ -2,6 +2,7 @@ extends ../layout
 
 block content
     h2 Login
+    p= "flashMessage: "+flashMessage
     p
       a(href='/users/new', class='button') Register 
     form(method='post', action='/sessions')
@@ -12,7 +13,7 @@ block content
         label Password:
         input(name='user[password]', value=user.password || '', type='password')
       div
-        input(type='checkbox', name="remeberMe")
+        input(type='checkbox', name='rememberMe')
         input(type='submit', value='Login')
         
     // Scripts 

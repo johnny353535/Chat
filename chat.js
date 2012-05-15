@@ -7,7 +7,7 @@ var webServerPort = 3000;
  * Webserver
  */
 
-var express = require('express'), routes = require('./routes'), http = require('http'), webSocketServer = require('websocket').server, lessMiddleware = require('less-middleware'), MongoStore = require('connect-mongodb'), flash = require('connect-flash');
+var express = require('express'), routes = require('./routes'), http = require('http'), webSocketServer = require('websocket').server, lessMiddleware = require('less-middleware'), MongoStore = require('connect-mongodb'), async = require('async'), flash = require('connect-flash');
 
 var chat = express();
 
@@ -36,7 +36,6 @@ chat.configure(function() {
 	chat.use(express.methodOverride());
 	chat.use(flash());
 
-	//TODO: Later mongoDB store (https://github.com/kcbanner/connect-mongo)
 	chat.use(chat.router);
 	chat.use(lessMiddleware({
 		src : __dirname + '/public',
@@ -57,7 +56,6 @@ chat.configure('production', function() {
 //TODO: Verification here
 
 function loadUser(req, res, next) {
-	console.log("loadUser: " + req.session.id);
 	if(req.session.userId) {//Session is set
 		userProvider.findById(req.session.userId, function(error, user) {
 			console.log("User: " + user)
@@ -75,9 +73,8 @@ function loadUser(req, res, next) {
 
 //TODO: Export routes to routes directory
 chat.get('/', loadUser, function(req, res) {
-	console.log("redirectmain id: " + req.currentUser._id);
 	userProvider.findContacts(req.currentUser._id.toString(), function(error, contacts) {
-		console.log('Contacts: ' + contacts);
+		console.log(contacts.length + ' contacts');
 		res.render('index.jade', {
 			title : 'Chat',
 			user : req.currentUser,
@@ -87,9 +84,11 @@ chat.get('/', loadUser, function(req, res) {
 });
 // Sessions
 chat.get('/sessions/new', function(req, res) {
+	console.log(req.flash('error').toString());
 	userProvider.newUser(function(error, user) {
 		res.render('sessions/new.jade', {
 			title : 'Login',
+			flashMessage : req.flash('error').toString(),
 			user : user
 		});
 	});
@@ -99,26 +98,12 @@ chat.post('/sessions', function(req, res) {
 	// Find the user and set the currentUser session variable
 	userProvider.findByUsername(req.body.user.username, function(error, user) {
 		if(user && user.password == req.body.user.password) {
+			console.log("UserId: " + user._id + " UserId: " + user.username);
 			req.session.userId = user._id;
 			req.session.userName = user.username;
-			console.log("remember: " + req.body.rememberMe);
-			// Remember me
-			if(req.body.rememberMe) {
-				var loginToken = new LoginToken({
-					userId : user._id,
-					username : user.username
-				});
-				loginToken.save(function() {
-					res.cookie('logintoken', loginToken.cookieValue, {
-						expires : new Date(Date.now() + 2 * 604800000),
-						path : '/'
-					});
-					res.redirect('/');
-				});
-			} else {
-				res.redirect('/');
-			}
+			res.redirect('/');
 		} else {
+			console.log("Wrong credentials");
 			req.flash('error', 'Incorrect credentials');
 			res.redirect('/sessions/new');
 		}
@@ -133,13 +118,31 @@ chat.del('/sessions', loadUser, function(req, res) {
 	}
 	res.redirect('/sessions/new');
 });
-/**** Webserver ****/
+// Helpers
+
+flash.dynamicHelpers = {
+	flashMessages : function(req, res) {
+		var html = '';
+		['error', 'info'].forEach(function(type) {
+			var messages = req.flash(type);
+			if(messages.length > 0) {
+				html += new FlashMessage(type, messages).toHTML();
+				html += '<div class"flash ' + type + '"><p>' + messages.join(',') + '</p></div>'
+			}
+		});
+		return html;
+	}
+};
+
+// WebSocket server
+// Partly: http://gist.github.com/2031681
+
 var clients = new Array();
 
 var webserver = http.createServer(chat).listen(webServerPort, function() {
 	console.log("Webserver is listening on port " + webServerPort);
 });
-// Port where we'll run the websocket server
+// Port of the WebSocket server
 var webSocketsServerPort = 8000;
 
 // Helper function for escaping input strings
@@ -151,7 +154,7 @@ function htmlEntities(str) {
 var websocketHTTPserver = http.createServer().listen(webSocketsServerPort, function() {
 	console.log("WebSocketsServer is listening on port " + webSocketsServerPort);
 });
-// Websocket server bound to HTTP server
+// The WebSocket server is bound to HTTP server
 var wsServer = new webSocketServer({
 	httpServer : websocketHTTPserver
 });
@@ -163,8 +166,8 @@ wsServer.on('request', function(req) {
 
 	var userId = null;
 	var userId = "4fa3a73fdb3071d1db173fe1";
-	/*var cookie = connect.utils.parseCookie(req.headers['cookie']);
-	console.log("cookies: "+cookie);*/
+	//var cookie = connect.utils.parseCookie(req.cookies);
+	//console.log("cookies: "+cookie);
 
 	var connection = req.accept(null, req.origin);
 	clients[userId] = connection;
@@ -183,9 +186,24 @@ wsServer.on('request', function(req) {
 		console.log((new Date()) + ' Connection accepted.');
 
 	}
-	// TODO Get all unread messages
 
-	// user sent some message
+	// Send online status
+	userProvider.findContacts(userId, function(error, contacts) {
+		async.forEach(contacts, function(contact, callbackFE) {
+			sessionProvider.findByUserId(contact.userId, function(error, session) {
+				if(session != null) {
+					var outgoing = {
+						type : 'availability',
+						contactId : contact.userId,
+						available : true
+					}
+					connection.sendUTF(JSON.stringify(outgoing));
+				}
+				callbackFE(error);
+			})
+		})
+	});
+	// User sent some message
 	connection.on('message', function(message) {
 
 		if(message.type === 'utf8') {// accept only text
@@ -202,28 +220,41 @@ wsServer.on('request', function(req) {
 
 				var delivered = false;
 				// send the message to the other client, if online
-				if(false) {//TODO Session exists
-					// broadcast message to all connected clients
-					var outgoing = {
-						type : 'message',
-						data : obj
-					};
-					clients[incoming.receiver].sendUTF(JSON.stringify(outgoing));
-					// Send data to receiver
-					delivered = true;
-				}
 
-				// store message
-				var obj = {
-					time : (new Date()).getTime(),
-					text : htmlEntities(incoming.text),
-					sender : userId,
-					receiver : incoming.receiver,
-					delivered : delivered
-				};
-				messageProvider.save(obj, function(error, messages) {
-				});
-			} else if(incoming.type == 'historyrequest') {
+				sessionProvider.findByUserId(incoming.receiver, function(error, session) {
+					if(session != null) {
+						console.log("user found, redirected");
+						// Online, send message
+						var outgoing = {
+							type : 'message',
+							data : obj
+						};
+						clients[incoming.receiver].sendUTF(JSON.stringify(outgoing));
+
+						// store message
+						var obj = {
+							time : (new Date()).getTime(),
+							text : htmlEntities(incoming.text),
+							sender : userId,
+							receiver : incoming.receiver,
+							delivered : delivered
+						};
+						messageProvider.save(obj, function(error, messages) {
+						});
+					} else {
+						// Offline, only store message
+						var obj = {
+							time : (new Date()).getTime(),
+							text : htmlEntities(incoming.text),
+							sender : userId,
+							receiver : incoming.receiver,
+							delivered : delivered
+						};
+						messageProvider.save(obj, function(error, messages) {
+						});
+					}
+				})
+			} else if(incoming.type == 'historyRequest') {
 				// send back chat history
 				messageProvider.getConversation(userId, incoming.contactId, function(error, history) {
 					if(error)
@@ -234,17 +265,19 @@ wsServer.on('request', function(req) {
 							contact : incoming.contactId,
 							data : history
 						}
-						console.log("Send history: " + JSON.stringify(outgoing))
+						console.log("Send history to " + userId);
 						connection.sendUTF(JSON.stringify(outgoing));
 					}
 				});
 			}
 		}
 	});
-	// user disconnected
+	// User disconnected
 	connection.on('close', function(connection) {
 		console.log((new Date()) + " Peer " + connection.remoteAddress + " disconnected.");
-		// remove user from the list of connected clients
+		// Remove user from the list of connected clients
 		clients.splice(userId, 1);
+
+		//TODO: Broadcast that user went offline
 	});
 });

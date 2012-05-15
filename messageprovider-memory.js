@@ -41,20 +41,17 @@ MessageProvider.prototype.findAll = function(callback) {
 MessageProvider.prototype.getConversation = function(userId, contactId, callback) {
 	this.getCollection(function(error, message_collection) {
 		console.log("History request ("+userId+", "+contactId+")");
-		var userIdHex = message_collection.db.bson_serializer.ObjectID.createFromHexString(userId);
-		var contactIdHex = message_collection.db.bson_serializer.ObjectID.createFromHexString(contactId);
 
 		if(error)
 			callback(error)
 		else {
 			message_collection.find({
 				$or : [{
-					sender : userIdHex, receiver: contactIdHex
+					sender : userId, receiver: contactId
 				}, {
-					sender : contactIdHex, receiver: userIdHex
+					sender : contactId, receiver: userId
 				}]
 			}).toArray(function(error, results) {
-				console.log(results);
 				if(error)
 					callback(error)
 				else

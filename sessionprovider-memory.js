@@ -55,6 +55,22 @@ SessionProvider.prototype.findById = function(id, callback) {
 	});
 };
 
+SessionProvider.prototype.findByUserId = function(userId, callback) {
+	this.getCollection(function(error, session_collection) {
+		if(error)
+			callback(error)
+		else {
+			session_collection.findOne({
+				_id : userId
+			}, function(error, result) {
+				if(error)
+					callback(error)
+				else
+					callback(null, result)
+			});
+		}
+	});
+};
 
 SessionProvider.prototype.save = function(sessions, callback) {
 	this.getCollection(function(error, session_collection) {

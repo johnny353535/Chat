@@ -4,31 +4,31 @@ block content
     #wrapper 
       #header
         h1 Chat
-        #settings-wrapper
+        #logout-wrapper
           a(href='#')
-            img#settingsIcon(src='/images/icons/settings.png')
+            img#logoutIcon(src='/images/icons/logout.png', alt='logoutIcon')
           #settingsMenu
             div
-              img(src="/images/userimages/"+user._id+".jpg")
+              img(src="/images/userimages/"+user._id+".jpg", alt="userimages"+user._id)
               | This is text
       #mainframe
         // Contactlist 
         #left-panel
           #searchuser-wrapper
             #searchIcon-wrapper
-              img(src='/images/icons/search.png')
+              img(src='/images/icons/search.png', alt='searchIcon')
             #searchInput-wrapper
               input#searchInput-js
             #addUser-wrapper
               a#addUser-js.tooltip(href='javascript:;', data-tip='Add User')
           #contactlist-wrapper
             ul#contactlist
-              - each user in contacts
-                li(id="uid"+user._id).online
-                  img(src="/images/userimages/"+user._id+".jpg")
+              - each contact in contacts
+                li(id="uid"+contact._id).offline
+                  img(src="/images/userimages/"+contact._id+".jpg", alt="userimages"+contact.name)
                   .userinfo
-                    strong.username= user.username
-                    p.availability • Online            
+                    strong.username= contact.username
+                    p.availability • Offline            
 
         // Chatwindow 
         #right-panel
@@ -38,7 +38,11 @@ block content
           // Chatinput 
           #chatinput-wrapper
             input#chatinput-js
-      // Scripts 
+      
+      input(type='hidden', id='userId', value='#{user._id}')
+      input(type='hidden', id='userName', value='#{user.username}')
+      
+      // Scripts
       script(src='/javascripts/lib/jquery-1.7.2.min.js', type='text/javascript')
       script(src='/javascripts/client.js', type='text/javascript')
       script(src='/javascripts/script.js', type='text/javascript')

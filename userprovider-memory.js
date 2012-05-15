@@ -86,22 +86,23 @@ UserProvider.prototype.findContacts = function(userId, callback) {
 					callback(error)
 				else {
 					console.log(user.contacts);
-					async.forEach(user.contacts, function(contact, callbackFE) {
-						console.log("Contact: "+contact.contactId+" accepted: "+contact.accepted)
-						if(contact.accepted) {
-							user_collection.findOne({
-								_id : user_collection.db.bson_serializer.ObjectID.createFromHexString(contact.contactId.toString())
-							}, function(error, contact) {
-								result.push(contact);
-								console.log("push " + contact)
+					if(user.contacts != undefined) {	// If contacts exist
+						async.forEach(user.contacts, function(contact, callbackFE) {
+							if(contact.accepted) {
+								// Accepted, add to the result array
+								user_collection.findOne({
+									_id : user_collection.db.bson_serializer.ObjectID.createFromHexString(contact.contactId.toString())
+								}, function(error, contact) {
+									result.push(contact);
+									callbackFE(error);
+								})
+							} else {
+								// Not accepted, do nothing
 								callbackFE(error);
-							})
-						} else {
-							console.log("don't push");
-							callbackFE();
-						}
-					}, function(error) { callback(error, result)
-					})
+							}
+						}, function(error) { callback(error, result)
+						})
+					} else callback(error, result);
 				}
 			});
 		}
