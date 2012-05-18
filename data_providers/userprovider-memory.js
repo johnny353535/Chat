@@ -85,7 +85,6 @@ UserProvider.prototype.findContacts = function(userId, callback) {
 				if(error)
 					callback(error)
 				else {
-					console.log(user.contacts);
 					if(user.contacts != undefined) {	// If contacts exist
 						async.forEach(user.contacts, function(contact, callbackFE) {
 							if(contact.accepted) {

@@ -5,12 +5,8 @@ block content
       #header
         h1 Chat
         #logout-wrapper
-          a(href='#')
-            img#logoutIcon(src='/images/icons/logout.png', alt='logoutIcon')
-          #settingsMenu
-            div
-              img(src="/images/userimages/"+user._id+".jpg", alt="userimages"+user._id)
-              | This is text
+          a(href='logout')
+            img#logoutIcon(src='/images/icons/logout.png', alt='logoutIcon', title='Logout')
       #mainframe
         // Contactlist 
         #left-panel
@@ -20,7 +16,7 @@ block content
             #searchInput-wrapper
               input#searchInput-js
             #addUser-wrapper
-              a#addUser-js.tooltip(href='javascript:;', data-tip='Add User')
+              a#addUser-js(href='javascript:;', title='Add User')
           #contactlist-wrapper
             ul#contactlist
               - each contact in contacts
@@ -39,8 +35,8 @@ block content
           #chatinput-wrapper
             input#chatinput-js
       
-      input(type='hidden', id='userId', value='#{user._id}')
-      input(type='hidden', id='userName', value='#{user.username}')
+      input(type='hidden', id='userId', value='#{userId}')
+      input(type='hidden', id='userName', value='#{username}')
       
       // Scripts
       script(src='/javascripts/lib/jquery-1.7.2.min.js', type='text/javascript')

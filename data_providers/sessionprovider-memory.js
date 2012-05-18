@@ -30,9 +30,9 @@ SessionProvider.prototype.findAll = function(callback) {
 		else {
 			session_collection.find().toArray(function(error, results) {
 				if(error)
-					callback(error)
+					callback(error);
 				else
-					callback(null, results)
+					callback(null, results);
 			});
 		}
 	});
@@ -41,15 +41,16 @@ SessionProvider.prototype.findAll = function(callback) {
 SessionProvider.prototype.findById = function(id, callback) {
 	this.getCollection(function(error, session_collection) {
 		if(error)
-			callback(error)
+			callback(error);
 		else {
 			session_collection.findOne({
-				_id : session_collection.db.bson_serializer.ObjectID.createFromHexString(id)
+				_id : id
 			}, function(error, result) {
-				if(error)
-					callback(error)
-				else
-					callback(null, result)
+				if(error) {
+					callback(error);
+				} else {
+					callback(null, result);
+				}
 			});
 		}
 	});
@@ -58,15 +59,16 @@ SessionProvider.prototype.findById = function(id, callback) {
 SessionProvider.prototype.findByUserId = function(userId, callback) {
 	this.getCollection(function(error, session_collection) {
 		if(error)
-			callback(error)
+			callback(error);
 		else {
 			session_collection.findOne({
-				_id : userId
+				session : {$regex : ".*"+userId+".*"}
 			}, function(error, result) {
-				if(error)
-					callback(error)
-				else
-					callback(null, result)
+				if(error){
+					callback(error);
+				} else {
+					callback(null, result);
+				}
 			});
 		}
 	});
@@ -74,10 +76,10 @@ SessionProvider.prototype.findByUserId = function(userId, callback) {
 
 SessionProvider.prototype.save = function(sessions, callback) {
 	this.getCollection(function(error, session_collection) {
-		if(error)
-			callback(error)
-		else {
-			if( typeof (sessions.length) == "undefined")
+		if(error){
+			callback(error);
+		} else {
+			if(typeof(sessions.length) == "undefined")
 				sessions = [sessions];
 
 			for(var i = 0; i < sessions.length; i++) {

@@ -3,7 +3,6 @@ var Connection = require('mongodb').Connection;
 var Server = require('mongodb').Server;
 var BSON = require('mongodb').BSON;
 var ObjectID = require('mongodb').ObjectID;
-
 MessageProvider = function(host, port) {
 	this.db = new Db('chat', new Server(host, port, {
 		auto_reconnect : true
@@ -36,32 +35,66 @@ MessageProvider.prototype.findAll = function(callback) {
 		}
 	});
 };
-
 // Get conversation between user and contact
 MessageProvider.prototype.getConversation = function(userId, contactId, callback) {
 	this.getCollection(function(error, message_collection) {
-		console.log("History request ("+userId+", "+contactId+")");
-
 		if(error)
 			callback(error)
 		else {
 			message_collection.find({
 				$or : [{
-					sender : userId, receiver: contactId
+					sender : contactId,
+					receiver : userId
 				}, {
-					sender : contactId, receiver: userId
+					sender : userId,
+					receiver : contactId
 				}]
 			}).toArray(function(error, results) {
-				if(error)
-					callback(error)
-				else
-					callback(null, results)
+				if(error) {
+					callback(error);
+				} else {
+
+					// Mark all incoming messages as read
+					message_collection.update({
+						sender : contactId,
+						receiver : userId,
+						delivered : false
+					}, {
+						$set : {
+							delivered : true
+						}
+					}, {
+						multi : true
+					})
+
+					callback(null, results);
+				}
 			});
 		}
 	});
 };
-
-
+// Get conversation between user and contact
+MessageProvider.prototype.getUnreadMessages = function(userId, contactId, callback) {
+	this.getCollection(function(error, message_collection) {
+		if(error)
+			callback(error)
+		else {
+			console.log("Getting unread messages for " + userId + " from " + contactId);
+			message_collection.find({
+				sender : contactId.toString(),
+				receiver : userId.toString(),
+				delivered : false
+			}).toArray(function(error, results) {
+				if(error) {
+					callback(error);
+				} else {
+					console.log("Unread messages: " + results);
+					callback(null, results);
+				}
+			});
+		}
+	});
+};
 
 MessageProvider.prototype.save = function(messages, callback) {
 	this.getCollection(function(error, message_collection) {

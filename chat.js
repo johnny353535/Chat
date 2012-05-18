@@ -12,11 +12,11 @@ var express = require('express'), routes = require('./routes'), http = require('
 var chat = express();
 
 // Data providers
-var UserProvider = require('./userprovider-memory').UserProvider;
+var UserProvider = require('./data_providers/userprovider-memory').UserProvider;
 var userProvider = new UserProvider('localhost', 27017);
-var MessageProvider = require('./messageprovider-memory').MessageProvider;
+var MessageProvider = require('./data_providers/messageprovider-memory').MessageProvider;
 var messageProvider = new MessageProvider('localhost', 27017);
-var SessionProvider = require('./sessionprovider-memory').SessionProvider;
+var SessionProvider = require('./data_providers/sessionprovider-memory').SessionProvider;
 var sessionProvider = new SessionProvider('localhost', 27017);
 
 chat.configure(function() {
@@ -58,9 +58,7 @@ chat.configure('production', function() {
 function loadUser(req, res, next) {
 	if(req.session.userId) {//Session is set
 		userProvider.findById(req.session.userId, function(error, user) {
-			console.log("User: " + user)
 			if(user) {// If user to the user_id exists
-				req.currentUser = user;
 				next();
 			} else {
 				res.redirect('/sessions/new');
@@ -73,11 +71,12 @@ function loadUser(req, res, next) {
 
 //TODO: Export routes to routes directory
 chat.get('/', loadUser, function(req, res) {
-	userProvider.findContacts(req.currentUser._id.toString(), function(error, contacts) {
+	userProvider.findContacts(req.session.userId, function(error, contacts) {
 		console.log(contacts.length + ' contacts');
 		res.render('index.jade', {
 			title : 'Chat',
-			user : req.currentUser,
+			userId : req.session.userId,
+			username: req.session.userName,
 			contacts : contacts
 		});
 	});
@@ -85,19 +84,16 @@ chat.get('/', loadUser, function(req, res) {
 // Sessions
 chat.get('/sessions/new', function(req, res) {
 	console.log(req.flash('error').toString());
-	userProvider.newUser(function(error, user) {
-		res.render('sessions/new.jade', {
-			title : 'Login',
-			flashMessage : req.flash('error').toString(),
-			user : user
-		});
+	res.render('sessions/new.jade', {
+		title : 'Login',
+		flashMessage : req.flash('error').toString()
 	});
 });
 
 chat.post('/sessions', function(req, res) {
 	// Find the user and set the currentUser session variable
-	userProvider.findByUsername(req.body.user.username, function(error, user) {
-		if(user && user.password == req.body.user.password) {
+	userProvider.findByUsername(req.body.username, function(error, user) {
+		if(user && user.password == req.body.password) {
 			console.log("UserId: " + user._id + " UserId: " + user.username);
 			req.session.userId = user._id;
 			req.session.userName = user.username;
@@ -110,7 +106,7 @@ chat.post('/sessions', function(req, res) {
 	});
 });
 
-chat.del('/sessions', loadUser, function(req, res) {
+chat.get('/logout', loadUser, function(req, res) {
 	// Remove the session
 	if(req.session) {
 		req.session.destroy(function() {
@@ -119,7 +115,6 @@ chat.del('/sessions', loadUser, function(req, res) {
 	res.redirect('/sessions/new');
 });
 // Helpers
-
 flash.dynamicHelpers = {
 	flashMessages : function(req, res) {
 		var html = '';
@@ -136,8 +131,6 @@ flash.dynamicHelpers = {
 
 // WebSocket server
 // Partly: http://gist.github.com/2031681
-
-var clients = new Array();
 
 var webserver = http.createServer(chat).listen(webServerPort, function() {
 	console.log("Webserver is listening on port " + webServerPort);
@@ -159,50 +152,100 @@ var wsServer = new webSocketServer({
 	httpServer : websocketHTTPserver
 });
 
+// Extracts the sid from the cookies
+function getSidFromCookies(cookies) {
+	var filtered = cookies.filter(function(obj) {
+		return obj.name == 'connect.sid';
+	});
+	return filtered.length > 0 ? unescape(filtered[0].value).substr(0, 24) : null;
+}
+
+// Keeps all open WebSocket connections
+var connections = {};
+
 // This callback function is called every time someone
 // tries to connect to the WebSocket server
 wsServer.on('request', function(req) {
 	console.log((new Date()) + ' Connection from origin ' + req.origin + '.');
 
 	var userId = null;
-	var userId = "4fa3a73fdb3071d1db173fe1";
-	//var cookie = connect.utils.parseCookie(req.cookies);
-	//console.log("cookies: "+cookie);
 
-	var connection = req.accept(null, req.origin);
-	clients[userId] = connection;
-
-	if(false) {
-		var sessionId = req.cookies.value;
-		sessionProvider.findById(sessionId, function(error, session) {
-			if(error)
-				connection.close()
-			else
-				userId = session.userId;
-			clients[session.userId] = connection;
-		})
+	if(req.origin == "http://localhost:3000") {
 		var connection = req.accept(null, req.origin);
-
 		console.log((new Date()) + ' Connection accepted.');
-
+	} else {
+		console.log("Connection from " + req.origin + " not accepted");
+		return;
 	}
 
-	// Send online status
-	userProvider.findContacts(userId, function(error, contacts) {
-		async.forEach(contacts, function(contact, callbackFE) {
-			sessionProvider.findByUserId(contact.userId, function(error, session) {
-				if(session != null) {
-					var outgoing = {
-						type : 'availability',
-						contactId : contact.userId,
-						available : true
+	console.log("sessionId: " + getSidFromCookies(req.cookies));
+	sessionProvider.findById(getSidFromCookies(req.cookies), function(error, session) {
+		if(error || session == null) {
+			connection.close();
+			console.log((new Date()) + ' Connection dropped.');
+		} else {
+
+			var session_parsed = JSON.parse(session.session);
+			userId = session_parsed.userId;
+			connection.id = userId;
+			connections[userId] = connection;
+
+			// Send online status of contacts
+			userProvider.findContacts(userId, function(error, contacts) {
+				async.forEach(contacts, function(contact, callbackFE) {
+					if(connections[contact._id] != undefined) {
+						// Get availability of other contacts
+						var outgoing = {
+							type : 'availability',
+							contactId : contact._id,
+							available : true
+						};
+						console.log("Send availability: " + JSON.stringify(outgoing));
+						connection.sendUTF(JSON.stringify(outgoing));
+
+						// Send own availability to other contacts
+						var outgoing2 = {
+							type : 'availability',
+							contactId : userId,
+							available : true
+						};
+						console.log("Broadcast availability: " + JSON.stringify(outgoing2));
+						connections[contact._id].sendUTF(JSON.stringify(outgoing2));
 					}
-					connection.sendUTF(JSON.stringify(outgoing));
-				}
-				callbackFE(error);
-			})
-		})
-	});
+
+					// Get unread messages
+					messageProvider.getUnreadMessages(userId, contact._id, function(error, unreadMessages) {
+						if(error) {
+							console.log("Error");
+							callbackFE(error);
+						} else {
+							async.forEach(unreadMessages, function(message, callbackFE2) {
+								console.log("Send unread message");
+
+								var obj = {
+									time : (new Date(message.time)).getTime(),
+									text : htmlEntities(message.text),
+									sender : contact._id,
+									receiver : userId
+								};
+
+								// Online, send message
+								var outgoing = {
+									type : 'message',
+									data : obj
+								};
+								connection.sendUTF(JSON.stringify(outgoing));
+
+								callbackFE2();
+							}, function() {
+								callbackFE();
+							})
+						}
+					});
+				})
+			});
+		}
+	})
 	// User sent some message
 	connection.on('message', function(message) {
 
@@ -218,42 +261,42 @@ wsServer.on('request', function(req) {
 			if(incoming.type == 'message') {
 				console.log((new Date()) + ' Received Message from ' + userId + ' to ' + incoming.receiver + ': ' + htmlEntities(incoming.text));
 
-				var delivered = false;
-				// send the message to the other client, if online
+				// send the message to the other client, if available
+				if(connections[incoming.receiver] != undefined) {
+					console.log("User online, redirected");
 
-				sessionProvider.findByUserId(incoming.receiver, function(error, session) {
-					if(session != null) {
-						console.log("user found, redirected");
-						// Online, send message
-						var outgoing = {
-							type : 'message',
-							data : obj
-						};
-						clients[incoming.receiver].sendUTF(JSON.stringify(outgoing));
+					var obj = {
+						time : (new Date()).getTime(),
+						text : htmlEntities(incoming.text),
+						sender : userId,
+						receiver : incoming.receiver,
+						delivered : true
+					};
 
-						// store message
-						var obj = {
-							time : (new Date()).getTime(),
-							text : htmlEntities(incoming.text),
-							sender : userId,
-							receiver : incoming.receiver,
-							delivered : delivered
-						};
-						messageProvider.save(obj, function(error, messages) {
-						});
-					} else {
-						// Offline, only store message
-						var obj = {
-							time : (new Date()).getTime(),
-							text : htmlEntities(incoming.text),
-							sender : userId,
-							receiver : incoming.receiver,
-							delivered : delivered
-						};
-						messageProvider.save(obj, function(error, messages) {
-						});
-					}
-				})
+					// Online, send message
+					var outgoing = {
+						type : 'message',
+						data : obj
+					};
+					connections[incoming.receiver].sendUTF(JSON.stringify(outgoing));
+
+					// store message
+					messageProvider.save(obj, function(error, messages) {
+					});
+				} else {
+					console.log("User offline, not redirected");
+					// Offline, only store message
+					var obj = {
+						time : (new Date()).getTime(),
+						text : htmlEntities(incoming.text),
+						sender : userId,
+						receiver : incoming.receiver,
+						delivered : false
+					};
+					messageProvider.save(obj, function(error, messages) {
+					});
+				}
+
 			} else if(incoming.type == 'historyRequest') {
 				// send back chat history
 				messageProvider.getConversation(userId, incoming.contactId, function(error, history) {
@@ -266,18 +309,39 @@ wsServer.on('request', function(req) {
 							data : history
 						}
 						console.log("Send history to " + userId);
+						//TODO: Mark all messages of the conversation as read
 						connection.sendUTF(JSON.stringify(outgoing));
 					}
 				});
+			} else if(incoming.type == 'logout') {
+
+				// Logout
+				console.log("Logout " + connection.id);
+
+			} else {
+				console.log('Unknown JSON message type: ' + JSON.stringify(incoming));
 			}
 		}
 	});
 	// User disconnected
 	connection.on('close', function(connection) {
-		console.log((new Date()) + " Peer " + connection.remoteAddress + " disconnected.");
-		// Remove user from the list of connected clients
-		clients.splice(userId, 1);
-
-		//TODO: Broadcast that user went offline
+		console.log((new Date()) + " Peer " + userId + " disconnected.");
+		delete connections[userId];
+		// Send online status of contacts
+		userProvider.findContacts(userId, function(error, contacts) {
+			async.forEach(contacts, function(contact, callbackFE) {
+				if(connections[contact._id] != undefined) {
+					// Send own availability to other contacts
+					var outgoing = {
+						type : 'availability',
+						contactId : userId,
+						available : false
+					};
+					console.log("Broadcast availability: " + JSON.stringify(outgoing));
+					connections[contact._id].sendUTF(JSON.stringify(outgoing));
+					callbackFE(error);
+				}
+			})
+		});
 	});
 });

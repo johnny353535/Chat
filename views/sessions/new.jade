@@ -8,12 +8,11 @@ block content
     form(method='post', action='/sessions')
       div
         label Username:
-        input(name='user[username]', value=user.username || '')
+        input(name='username')
       div
         label Password:
-        input(name='user[password]', value=user.password || '', type='password')
+        input(name='password', type='password')
       div
-        input(type='checkbox', name='rememberMe')
         input(type='submit', value='Login')
         
     // Scripts 

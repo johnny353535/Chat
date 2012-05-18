@@ -1,4 +1,4 @@
-$(document).ready(function() {"use strict";
+$(document).ready(function() {"use strict";// http://ejohn.org/blog/ecmascript-5-strict-mode-json-and-more/
 
 	// Partly: http://gist.github.com/2031681
 
@@ -20,14 +20,12 @@ $(document).ready(function() {"use strict";
 
 	connection.onopen = function() {
 	};
-
 	// Display error, if an error occurs
 	connection.onerror = function(error) {
 		content.html($('<p>', {
 			text : 'The connection couldn\'t be established or the server is down.</p>'
 		}));
 	};
-	
 	// Incoming message
 	connection.onmessage = function(message) {
 		// The server always sends JSON
@@ -39,23 +37,20 @@ $(document).ready(function() {"use strict";
 		}
 
 		// The type field defines the kind of message
-		if(json.type === 'message') { // A single message
-			input.removeAttr('disabled');
+		if(json.type === 'message') {// A single message
 			// let the user write another message
 			newMessage(json.data.text, json.data.sender, new Date(json.data.time));
-		} else if(json.type === 'history') { // The server sends the history of the conversation
+		} else if(json.type === 'history') {// The server sends the history of the conversation
 			console.log("Received history");
 			for(var i = 0; i < json.data.length; i++) {
-				newMessage(json.data[i].text, json.data[i].sender, new Date(json.data[i].time));
+				window.newMessage(json.data[i].text, json.data[i].sender, new Date(json.data[i].time));
 			}
 		} else if(json.type === 'availability') {
-			setAvailability(json.data.contactId,json.data.availability);
+			setAvailability(json.contactId, json.available);
 		} else {
-			console.log('Unknown JSON message type: ', json);
+			console.log('Unknown JSON message type: ' + JSON.stringify(json));
 		}
 	};
-	
-
 	// Send message when user presses Enter key
 	window.sendMessage = function(msg) {
 		// send the message as JSON
@@ -69,7 +64,6 @@ $(document).ready(function() {"use strict";
 		connection.send(outgoing);
 		console.log('sendMessage: ' + outgoing);
 	}
-
 	// Request the history
 	window.requestHistory = function() {
 		// send the message as JSON
@@ -82,7 +76,14 @@ $(document).ready(function() {"use strict";
 		connection.send(outgoing);
 		console.log('requestedHistory: ' + obj.contactId);
 	}
-
+	// Logout
+	window.logout = function() {
+		// send the message as JSON
+		var obj = {
+			type : 'logout'
+		};
+		connection.send(JSON.stringify(obj));
+	}
 	// If the server doesn't respond for 3 seconds a error message is being displayed
 	setInterval(function() {
 		if(connection.readyState !== 1) {
