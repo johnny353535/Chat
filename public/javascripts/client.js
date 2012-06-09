@@ -43,10 +43,13 @@ $(document).ready(function() {"use strict";// http://ejohn.org/blog/ecmascript-5
 		} else if(json.type === 'history') {// The server sends the history of the conversation
 			console.log("Received history");
 			for(var i = 0; i < json.data.length; i++) {
-				window.newMessage(json.data[i].text, json.data[i].sender, new Date(json.data[i].time));
+				newMessage(json.data[i].text, json.data[i].sender, new Date(json.data[i].time));
 			}
 		} else if(json.type === 'availability') {
 			setAvailability(json.contactId, json.available);
+		} else if(json.type === 'searchResult') {// The server sends the searchresult of a user search
+			console.log("Received searchresult " + JSON.stringify(json));
+			displaySearchresult(json.username, json.data);
 		} else {
 			console.log('Unknown JSON message type: ' + JSON.stringify(json));
 		}
@@ -75,6 +78,30 @@ $(document).ready(function() {"use strict";// http://ejohn.org/blog/ecmascript-5
 		var outgoing = JSON.stringify(obj);
 		connection.send(outgoing);
 		console.log('requestedHistory: ' + obj.contactId);
+	}
+	// Search users
+	window.searchUsers = function(username) {
+		// send the message as JSON
+		var obj = {
+			type : 'searchUsers',
+			username : username
+		};
+
+		var outgoing = JSON.stringify(obj);
+		connection.send(outgoing);
+		console.log('searchUsers: ' + obj.username);
+	}
+	// Add contact
+	window.addContact = function(userId) {
+		// send the message as JSON
+		var obj = {
+			type : 'addContact',
+			contactId : contactId
+		};
+
+		var outgoing = JSON.stringify(obj);
+		connection.send(outgoing);
+		console.log('addContact: ' + obj.userId);
 	}
 	// Logout
 	window.logout = function() {

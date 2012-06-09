@@ -15,12 +15,9 @@ $(document).ready(function() {
 	$('#contactlist').change();
 	$('input#chatinput-js').attr('disabled', 'disabled').val('Please select a user or add a new user to your contactlist.');
 
-	// Functions
-	//$('#settingsMenu').css('right','-1px');	//TODO
-	//$('#settingsWrapper').click( function(){ $('#settingsMenu').css('right','-1'); });
+	$("#searchresult").hide();
+	$("#friendrequest").hide();
 
-	$('#addUser-js').click(function() { prompt("Add User");
-	});
 	// Eventlistener for the logout button
 	$('#logout').click(function() {
 		logout();
@@ -45,11 +42,39 @@ $(document).ready(function() {
 			// and hide the ones not containing the input while showing the ones that do
 			$('#contactlist li').find("strong:not(" + filter + ")").parent().parent().hide();
 			$('#contactlist li').find("strong:contains(" + filter + ")").parent().parent().show();
+
+			if(filter.length > 2) {//Search among all users
+				$("#searchresult").show();
+				searchUsers(filter);
+			}
 		} else {
+			$("#searchresult").hide();
 			$('#contactlist li').show();
 		}
 		return false;
 	});
+	// Display search result
+	window.displaySearchresult = function(username, results) {
+		$("#searchresult li").not(".header").remove();
+		var searchresultLi;
+		if($("#searchInput-js").val() == username) {
+			for(var i = 0; i < results.length; i++) {
+				searchresultLi = $('<li id="' + results[i]._id + '"></li>');
+				searchresultLi.html('<img src="/images/userimages/' + results[i]._id + '.jpg" alt="' + results[i].username + '"><div class="userinfo"><strong class="username">' + results[i].username + '</strong><p class="status"><a href="javascript:;" id="addContact-js">+ Add as a contact</a></p></div>');
+				$("#searchresult").append(searchresultLi);
+			}
+
+			$('#addContact-js').click(function() {
+				console.log("Add contact");
+				var username = $(this).parent().parent().find("strong").html();
+				var userId = $(this).parent().parent().parent().attr("id");
+				if(confirm("Do you want to add " + username + " to your contact list?")) {	
+					//addContact(userId);
+					alert("That user is already in your contact list.");
+				}
+			});
+		}
+	}
 	// Sort the userlist
 	// Source: http://www.onemoretake.com/2009/02/25/sorting-elements-with-jquery/
 	$('#contactlist').change(function() {
@@ -81,11 +106,11 @@ $(document).ready(function() {
 		element = $("#contactlist #uid" + contactId);
 		if(available) {
 			element.removeClass('offline');
-			element.find(".availability").html('&bull; Online');
+			element.find(".status").html('&bull; Online');
 			element.addClass('online');
 		} else {
 			element.removeClass('online');
-			element.find(".availability").html('&bull; Offline');
+			element.find(".status").html('&bull; Offline');
 			element.addClass('offline');
 		}
 
@@ -153,7 +178,7 @@ $(document).ready(function() {
 				// Create message thread
 				var newThreadLi = $('<li></li>');
 				newThreadLi.html('<div class="message outgoingMessage"><img src="images/userimages/' + userId + '.jpg" alt="userimage' + userName + '"><div class="messagetext"><strong class="username">' + userName + '</strong><ul class="messages"></ul><p class="time"></p></div>');
-				
+
 				$('ul#conversation').append(newThreadLi);
 				lastMessage = $('.message').last();
 			}

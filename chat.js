@@ -7,7 +7,7 @@ var webServerPort = 3000;
  * Webserver
  */
 
-var express = require('express'), routes = require('./routes'), http = require('http'), webSocketServer = require('websocket').server, lessMiddleware = require('less-middleware'), MongoStore = require('connect-mongodb'), async = require('async'), flash = require('connect-flash');
+var express = require('express'), /*routes = require('./routes'),*/ http = require('http'), webSocketServer = require('websocket').server, lessMiddleware = require('less-middleware'), MongoStore = require('connect-mongodb'), async = require('async'), flash = require('connect-flash');
 
 var chat = express();
 
@@ -76,7 +76,7 @@ chat.get('/', loadUser, function(req, res) {
 		res.render('index.jade', {
 			title : 'Chat',
 			userId : req.session.userId,
-			username: req.session.userName,
+			username : req.session.userName,
 			contacts : contacts
 		});
 	});
@@ -220,7 +220,6 @@ wsServer.on('request', function(req) {
 							callbackFE(error);
 						} else {
 							async.forEach(unreadMessages, function(message, callbackFE2) {
-								console.log("Send unread message");
 
 								var obj = {
 									time : (new Date(message.time)).getTime(),
@@ -309,15 +308,37 @@ wsServer.on('request', function(req) {
 							data : history
 						}
 						console.log("Send history to " + userId);
-						//TODO: Mark all messages of the conversation as read
 						connection.sendUTF(JSON.stringify(outgoing));
 					}
 				});
-			} else if(incoming.type == 'logout') {
-
-				// Logout
-				console.log("Logout " + connection.id);
-
+			} else if(incoming.type == 'searchUsers') {
+				userProvider.findUsers(incoming.username, function(error, users) {
+					if(error)
+						console.log(error);
+					else {
+						var outgoing = {
+							type : 'searchResult',
+							username : incoming.username,
+							data : users
+						}
+						console.log("Send searchresult to " + userId);
+						connection.sendUTF(JSON.stringify(outgoing));
+					}
+				})
+			} else if(incoming.type == 'addContact') {
+				// Add user to contactlist
+				messageProvider.addContact(incoming.contactId, function(error, contact) {
+					if(error)
+						console.log(error);
+					else {
+						var outgoing = {
+							type : 'newContact',
+							contact : incoming.contactId
+						}
+						console.log("Send new contact to " + userId);
+						connection.sendUTF(JSON.stringify(outgoing));
+					}
+				});
 			} else {
 				console.log('Unknown JSON message type: ' + JSON.stringify(incoming));
 			}

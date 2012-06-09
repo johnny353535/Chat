@@ -15,17 +15,20 @@ block content
               img(src='/images/icons/search.png', alt='searchIcon')
             #searchInput-wrapper
               input#searchInput-js
-            #addUser-wrapper
+            //#addUser-wrapper
               a#addUser-js(href='javascript:;', title='Add User')
           #contactlist-wrapper
-            ul#contactlist
+            ul#contactlist.userlist
               - each contact in contacts
                 li(id="uid"+contact._id).offline
-                  img(src="/images/userimages/"+contact._id+".jpg", alt="userimages"+contact.name)
+                  img(src="/images/userimages/"+contact._id+".jpg", alt="userimages"+contact.username)
                   .userinfo
                     strong.username= contact.username
-                    p.availability • Offline            
-
+                    p.status • Offline
+            ul#searchresult.userlist
+              li.header= "Not in your contact list"
+            ul#friendrequest.userlist
+              li.header= "Friend requests"
         // Chatwindow 
         #right-panel
           #conversation-wrapper

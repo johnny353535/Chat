@@ -79,7 +79,6 @@ MessageProvider.prototype.getUnreadMessages = function(userId, contactId, callba
 		if(error)
 			callback(error)
 		else {
-			console.log("Getting unread messages for " + userId + " from " + contactId);
 			message_collection.find({
 				sender : contactId.toString(),
 				receiver : userId.toString(),
@@ -88,7 +87,8 @@ MessageProvider.prototype.getUnreadMessages = function(userId, contactId, callba
 				if(error) {
 					callback(error);
 				} else {
-					console.log("Unread messages: " + results);
+					if(results.length)
+						console.log("Unread messages: " + results);
 					callback(null, results);
 				}
 			});

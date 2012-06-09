@@ -198,7 +198,7 @@ body {
 	overflow-y: auto;
 }
 
-#contactlist {
+.userlist {
 	list-style: none;
 
 	li {
@@ -230,7 +230,7 @@ body {
 				text-shadow: 1px 1px 0px #fff;
 			}
 
-			.availability {
+			.status {
 				font-size: 11px;
 				text-shadow: 1px 1px 0px #fff;
 			}
@@ -267,7 +267,7 @@ body {
 	}
 
 	li.online {
-		.availability {
+		.status {
 			color: #00ff00;
 		}
 	}
@@ -282,7 +282,7 @@ body {
 				color: #999;
 			}
 	
-			.availability {
+			.status {
 				color: #bbb;
 			}
 		}
@@ -303,7 +303,7 @@ body {
 				text-shadow: 1px 1px 0px @blue-dark;
 			}
 	
-			.availability {
+			.status {
 				text-shadow: 1px 1px 0px @blue-dark;
 			}
 		}
@@ -312,9 +312,49 @@ body {
 	li.selected:hover {
 			background-color: @blue;
 	}
+	
+	li.header {
+		color: #666;
+		text-shadow: 1px 1px 0px #eee;
+		font-weight: bold;
+		padding: 3px 5px;
+		
+		cursor: pointer;
+		
+		background-image: -webkit-linear-gradient(bottom, #ccc 10%, #eee 90%);
+		border-bottom: 1px solid #aaa;
+	}
 
 }
 
+#contactlist {
+
+
+}
+
+
+#searchresult {
+	li {
+		cursor: default;
+		
+		a {
+			color: #777;
+		}
+		
+		a:hover {
+			color: #222;
+			cursor: pointer;
+		}
+	}
+	
+	li:hover {
+		background-color: #eee;
+	}
+}
+
+#friendrequests {
+
+}
 
 /********** right panel **********/
 
