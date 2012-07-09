@@ -1,19 +1,16 @@
 extends ../layout
 
 block content
-    h2 Login
-    p= "flashMessage: "+flashMessage
-    p
-      a(href='/users/new', class='button') Register 
-    form(method='post', action='/sessions')
-      div
-        label Username:
-        input(name='username')
-      div
-        label Password:
-        input(name='password', type='password')
-      div
-        input(type='submit', value='Login')
+    div#loginWrapper
+      div#header
+        h1#logo Chat
+      div#login
+        form(method='post', action='/sessions')#loginForm
+          p= 'Username:'
+          input(name='username', type='text')#username
+          p= 'Password:'
+          input(name='password', type='password')#password
+          input(type='submit', value='Login')#submitButton
         
     // Scripts 
     script(src='/javascripts/lib/jquery-1.7.2.min.js', type='text/javascript')

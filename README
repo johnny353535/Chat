@@ -1,0 +1,8 @@
+A basic web chat application build on Node.js. It gives the user the possibility to send messages, leave messages, search contacts and add contacts. Data is being pushed via HTML5 WebSockets and stored in a MongoDB database.
+
+Required collections are:
+- Sessions (managed by Express.js)
+- Users (_id, username, password, contacts [contactId, accepted(boolean)])
+- Messages (_id, time, text, sender, receiver, delivered(boolean), created_at)
+
+© 2012, Jonas Hartweg

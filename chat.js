@@ -1,7 +1,20 @@
+/**************************************************/
+/*
+/* Node.js Web chat application by Jonas Hartweg
+/*
+/* Background: This application has been created
+/* as part of a Bachelor project in Spring 2012
+/* that compares Node.js to the Apache web server
+/*
+/**************************************************/
+
+
 // http://ejohn.org/blog/ecmascript-5-strict-mode-json-and-more/
 "use strict";
 
 var webServerPort = 3000;
+
+
 
 /**
  * Webserver
@@ -53,8 +66,6 @@ chat.configure('development', function() {
 chat.configure('production', function() {
 	chat.use(express.errorHandler());
 });
-//TODO: Verification here
-
 function loadUser(req, res, next) {
 	if(req.session.userId) {//Session is set
 		userProvider.findById(req.session.userId, function(error, user) {
@@ -69,10 +80,8 @@ function loadUser(req, res, next) {
 	}
 }
 
-//TODO: Export routes to routes directory
 chat.get('/', loadUser, function(req, res) {
 	userProvider.findContacts(req.session.userId, function(error, contacts) {
-		console.log(contacts.length + ' contacts');
 		res.render('index.jade', {
 			title : 'Chat',
 			userId : req.session.userId,
@@ -85,7 +94,7 @@ chat.get('/', loadUser, function(req, res) {
 chat.get('/sessions/new', function(req, res) {
 	console.log(req.flash('error').toString());
 	res.render('sessions/new.jade', {
-		title : 'Login',
+		title : 'Chat - Login',
 		flashMessage : req.flash('error').toString()
 	});
 });
@@ -94,7 +103,7 @@ chat.post('/sessions', function(req, res) {
 	// Find the user and set the currentUser session variable
 	userProvider.findByUsername(req.body.username, function(error, user) {
 		if(user && user.password == req.body.password) {
-			console.log("UserId: " + user._id + " UserId: " + user.username);
+			console.log("UserId: " + user._id + " UserId: " + user.username + " connected");
 			req.session.userId = user._id;
 			req.session.userName = user.username;
 			res.redirect('/');
@@ -326,17 +335,39 @@ wsServer.on('request', function(req) {
 					}
 				})
 			} else if(incoming.type == 'addContact') {
-				// Add user to contactlist
-				messageProvider.addContact(incoming.contactId, function(error, contact) {
-					if(error)
+				// Add contact to contact list of user
+				userProvider.addContact(userId, incoming.contactId, function(error, contact) {
+					if(error) {
 						console.log(error);
-					else {
+					} else {
+						var contactOnline = false;
+						// Check if contact online, so the status can send directly - saves communication later
+						if(connections[incoming.contactId] != undefined)
+							contactOnline = true;
+
 						var outgoing = {
 							type : 'newContact',
-							contact : incoming.contactId
+							availability : contactOnline,
+							contact : contact
 						}
-						console.log("Send new contact to " + userId);
 						connection.sendUTF(JSON.stringify(outgoing));
+						console.log("Send new contact to " + userId);
+					}
+				});
+				// Add user to contact list of contact
+				userProvider.addContact(incoming.contactId, userId, function(error, contact) {
+					if(error) {
+						console.log(error);
+					} else {
+						if(connections[incoming.contactId] != undefined) {// If online
+							var outgoing = {
+								type : 'newContact',
+								availability : true,
+								contact : contact
+							}
+							console.log("Send new contact to " + incoming.contactId);
+							connections[incoming.contactId].sendUTF(JSON.stringify(outgoing));
+						}
 					}
 				});
 			} else {

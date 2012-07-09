@@ -62,9 +62,11 @@ SessionProvider.prototype.findByUserId = function(userId, callback) {
 			callback(error);
 		else {
 			session_collection.findOne({
-				session : {$regex : ".*"+userId+".*"}
+				session : {
+					$regex : ".*" + userId + ".*"
+				}
 			}, function(error, result) {
-				if(error){
+				if(error) {
 					callback(error);
 				} else {
 					callback(null, result);
@@ -76,10 +78,10 @@ SessionProvider.prototype.findByUserId = function(userId, callback) {
 
 SessionProvider.prototype.save = function(sessions, callback) {
 	this.getCollection(function(error, session_collection) {
-		if(error){
+		if(error) {
 			callback(error);
 		} else {
-			if(typeof(sessions.length) == "undefined")
+			if( typeof (sessions.length) == "undefined")
 				sessions = [sessions];
 
 			for(var i = 0; i < sessions.length; i++) {

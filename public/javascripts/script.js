@@ -13,9 +13,10 @@ $(document).ready(function() {
 	$("#contactlist-wrapper").css('height', $('#left-panel').outerHeight() - $('#searchuser-wrapper').outerHeight());
 	$("#conversation-wrapper").css('height', $('#right-panel').outerHeight() - $('#chatinput-wrapper').outerHeight());
 	$('#contactlist').change();
-	$('input#chatinput-js').attr('disabled', 'disabled').val('Please select a user or add a new user to your contactlist.');
 
 	$("#searchresult").hide();
+	$("#contactlist .header").hide();
+	$("#contactlist .noResult").hide();
 	$("#friendrequest").hide();
 
 	// Eventlistener for the logout button
@@ -30,6 +31,11 @@ $(document).ready(function() {
 		// Clear input
 		$(this).change();
 	});
+
+	$('#searchInput-js').one("click", function() {
+		$(this).css("color", "#222");
+		$(this).val("");
+	})
 	// Fix to make jQuery's "contains" case insensitive
 	jQuery.expr[':'].contains = function(a, i, m) {
 		return jQuery(a).text().toUpperCase().indexOf(m[3].toUpperCase()) >= 0;
@@ -37,40 +43,71 @@ $(document).ready(function() {
 
 	$('#searchInput-js').change(function() {
 		var filter = $(this).val();
-		if(filter) {
-			// this finds all links in a list that contain the input,
-			// and hide the ones not containing the input while showing the ones that do
+		if(filter.length > 2) {
+			/* this finds all links in a list that contain the input,
+			 and hide the ones not containing the input while showing the ones that do */
 			$('#contactlist li').find("strong:not(" + filter + ")").parent().parent().hide();
 			$('#contactlist li').find("strong:contains(" + filter + ")").parent().parent().show();
 
-			if(filter.length > 2) {//Search among all users
-				$("#searchresult").show();
-				searchUsers(filter);
-			}
+			$("#contactlist .header").show();
+			$("#searchresult").show();
+			searchUsers(filter);
+
 		} else {
+			$("#contactlist .header").hide();
+			$("#contactlist .noResult").hide();
 			$("#searchresult").hide();
-			$('#contactlist li').show();
+			$('#contactlist li').not(".header").not(".noResult").show();
 		}
 		return false;
 	});
 	// Display search result
-	window.displaySearchresult = function(username, results) {
-		$("#searchresult li").not(".header").remove();
+	window.displaySearchresult = function(contactname, results) {
+		$("#searchresult li").not(".header").not(".noResult").remove();
 		var searchresultLi;
-		if($("#searchInput-js").val() == username) {
+		if($("#searchInput-js").val() == contactname) {
 			for(var i = 0; i < results.length; i++) {
-				searchresultLi = $('<li id="' + results[i]._id + '"></li>');
-				searchresultLi.html('<img src="/images/userimages/' + results[i]._id + '.jpg" alt="' + results[i].username + '"><div class="userinfo"><strong class="username">' + results[i].username + '</strong><p class="status"><a href="javascript:;" id="addContact-js">+ Add as a contact</a></p></div>');
-				$("#searchresult").append(searchresultLi);
+				if(!$("#uid" + results[i]._id).length && results[i]._id != userId) {// If the user is not a contact and not the current user
+					searchresultLi = $('<li id="' + results[i]._id + '"></li>');
+					searchresultLi.html('<img src="/images/userimages/' + results[i]._id + '.jpg" alt="' + results[i].username + '"><div class="userinfo"><strong class="username">' + results[i].username + '</strong><p class="status"><a href="javascript:;" id="addContact-js">+ Add as a contact</a></p></div>');
+					$("#searchresult").append(searchresultLi);
+				}
+			}
+
+			// Check if results exist for "Contact list"
+			var elementsVisible = false;
+			$("#contactlist li").not(".header").not(".noResult").each(function() {
+				if($(this).is(":visible")) {
+					elementsVisible = true;
+					return false;
+				}
+			})
+			if(!elementsVisible) {
+				$("#contactlist .noResult").show();
+			} else {
+				$("#contactlist .noResult").hide();
+			}
+
+			// Check if results exist for "Other Users"
+			elementsVisible = false;
+			$("#searchresult li").not(".header").not(".noResult").each(function() {
+				if($(this).is(":visible")) {
+					elementsVisible = true;
+					return false;
+				}
+			})
+			if(!elementsVisible) {
+				$("#searchresult .noResult").show();
+			} else {
+				$("#searchresult .noResult").hide();
 			}
 
 			$('#addContact-js').click(function() {
-				console.log("Add contact");
-				var username = $(this).parent().parent().find("strong").html();
-				var userId = $(this).parent().parent().parent().attr("id");
-				if(confirm("Do you want to add " + username + " to your contact list?")) {	
-					//addContact(userId);
-					alert("That user is already in your contact list.");
+				var selectedName = $(this).parent().parent().find("strong").html();
+				var selectedUid = $(this).parent().parent().parent().attr("id");
+
+				if(confirm("Do you want to add " + selectedName + " to your contact list?")) {
+					addContact(selectedUid);
 				}
 			});
 		}
@@ -131,7 +168,7 @@ $(document).ready(function() {
 	}
 
 	// Changing contacts
-	$("#contactlist li").click(function() {
+	$("#contactlist li").live("click", function() {
 		$("#contactlist li").removeClass('selected');
 		$(this).addClass('selected');
 		$(".unreadCounter", this).remove();
@@ -148,12 +185,9 @@ $(document).ready(function() {
 	});
 	// Display conversation
 	window.newMessage = function(text, sender, date) {
-		console.log("Sender: " + sender + " contactId: " + contactId + " userId:" + userId + " at " + date);
 		if(sender == contactId || sender == userId) {
-			console.log("currentConversation");
 			addMessage(text, sender, date);
 		} else {
-			console.log("notCurrentConversation");
 			incrementUnreadCount(sender);
 		}
 	}
@@ -207,6 +241,23 @@ $(document).ready(function() {
 		scrollChat();
 	}
 
+	//adds a new contact to the list
+	window.newContact = function(contactId, contactName, availability) {
+		console.log("New contact");
+
+		if(availability) {
+			var newContactLi = $('<li id="uid' + contactId + '" class="online"></li>');
+			newContactLi.html('<img src="images/userimages/' + contactId + '.jpg" alt="userimage ' + contactName + '"><div class="userinfo"><strong class="username">' + contactName + '</strong><p class="status">&bull; Online</p></div>');
+		} else {
+			var newContactLi = $('<li id="uid' + contactId + '" class="offline"></li>');
+			newContactLi.html('<img src="images/userimages/' + contactId + '.jpg" alt="userimage ' + contactName + '"><div class="userinfo"><strong class="username">' + contactName + '</strong><p class="status">&bull; Offline</p></div>');
+		}
+
+		$("#contactlist").append(newContactLi);
+		$('#contactlist').change();
+		$('#searchInput-js').val('');
+		$('#searchInput-js').change();
+	}
 	// Chatinput control
 	$("input#chatinput-js").keydown(function(e) {
 		if(e.keyCode == 13) {

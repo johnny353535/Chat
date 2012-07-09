@@ -23,7 +23,7 @@ $(document).ready(function() {"use strict";// http://ejohn.org/blog/ecmascript-5
 	// Display error, if an error occurs
 	connection.onerror = function(error) {
 		content.html($('<p>', {
-			text : 'The connection couldn\'t be established or the server is down.</p>'
+			text : 'The connection can\'t be established or the server is down.</p>'
 		}));
 	};
 	// Incoming message
@@ -32,7 +32,7 @@ $(document).ready(function() {"use strict";// http://ejohn.org/blog/ecmascript-5
 		try {
 			var json = JSON.parse(message.data);
 		} catch (e) {
-			console.log('This doesn\'t look like a valid JSON: ', message.data);
+			console.log('Invalid JSON (' + message.data + ')');
 			return;
 		}
 
@@ -41,17 +41,20 @@ $(document).ready(function() {"use strict";// http://ejohn.org/blog/ecmascript-5
 			// let the user write another message
 			newMessage(json.data.text, json.data.sender, new Date(json.data.time));
 		} else if(json.type === 'history') {// The server sends the history of the conversation
-			console.log("Received history");
+			console.log("History received");
 			for(var i = 0; i < json.data.length; i++) {
 				newMessage(json.data[i].text, json.data[i].sender, new Date(json.data[i].time));
 			}
 		} else if(json.type === 'availability') {
 			setAvailability(json.contactId, json.available);
 		} else if(json.type === 'searchResult') {// The server sends the searchresult of a user search
-			console.log("Received searchresult " + JSON.stringify(json));
+			console.log("Searchresult received (" + JSON.stringify(json.username) + ")");
 			displaySearchresult(json.username, json.data);
+		} else if(json.type === 'newContact') {// The server sends the searchresult of a user search
+			console.log("New contact received (" + JSON.stringify(json.contact.username) + ')');
+			newContact(json.contact._id, json.contact.username, json.availability);
 		} else {
-			console.log('Unknown JSON message type: ' + JSON.stringify(json));
+			console.log('Unknown JSON message type (' + JSON.stringify(json) + ')');
 		}
 	};
 	// Send message when user presses Enter key
@@ -65,7 +68,7 @@ $(document).ready(function() {"use strict";// http://ejohn.org/blog/ecmascript-5
 
 		var outgoing = JSON.stringify(obj);
 		connection.send(outgoing);
-		console.log('sendMessage: ' + outgoing);
+		console.log('Message sent (' + outgoing + ')');
 	}
 	// Request the history
 	window.requestHistory = function() {
@@ -77,7 +80,7 @@ $(document).ready(function() {"use strict";// http://ejohn.org/blog/ecmascript-5
 
 		var outgoing = JSON.stringify(obj);
 		connection.send(outgoing);
-		console.log('requestedHistory: ' + obj.contactId);
+		console.log('History requested (' + obj.contactId + ')');
 	}
 	// Search users
 	window.searchUsers = function(username) {
@@ -89,10 +92,10 @@ $(document).ready(function() {"use strict";// http://ejohn.org/blog/ecmascript-5
 
 		var outgoing = JSON.stringify(obj);
 		connection.send(outgoing);
-		console.log('searchUsers: ' + obj.username);
+		console.log('Search requested (' + obj.username + ')');
 	}
 	// Add contact
-	window.addContact = function(userId) {
+	window.addContact = function(contactId) {
 		// send the message as JSON
 		var obj = {
 			type : 'addContact',
@@ -101,7 +104,7 @@ $(document).ready(function() {"use strict";// http://ejohn.org/blog/ecmascript-5
 
 		var outgoing = JSON.stringify(obj);
 		connection.send(outgoing);
-		console.log('addContact: ' + obj.userId);
+		console.log('New contact requested (' + obj.contactId + ')');
 	}
 	// Logout
 	window.logout = function() {
@@ -110,6 +113,7 @@ $(document).ready(function() {"use strict";// http://ejohn.org/blog/ecmascript-5
 			type : 'logout'
 		};
 		connection.send(JSON.stringify(obj));
+		console.log('User logged out');
 	}
 	// If the server doesn't respond for 3 seconds a error message is being displayed
 	setInterval(function() {

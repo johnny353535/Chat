@@ -14,21 +14,22 @@ block content
             #searchIcon-wrapper
               img(src='/images/icons/search.png', alt='searchIcon')
             #searchInput-wrapper
-              input#searchInput-js
+              input#searchInput-js(value='Search for a contact or other users')
             //#addUser-wrapper
               a#addUser-js(href='javascript:;', title='Add User')
           #contactlist-wrapper
             ul#contactlist.userlist
+              li.header= "Contacts"
+              li.noResult= "No contact found"
               - each contact in contacts
                 li(id="uid"+contact._id).offline
-                  img(src="/images/userimages/"+contact._id+".jpg", alt="userimages"+contact.username)
+                  img(src="/images/userimages/"+contact._id+".jpg", alt="userimage "+contact.username)
                   .userinfo
                     strong.username= contact.username
                     p.status • Offline
             ul#searchresult.userlist
-              li.header= "Not in your contact list"
-            ul#friendrequest.userlist
-              li.header= "Friend requests"
+              li.header= "Other Users"
+              li.noResult= "No user found"
         // Chatwindow 
         #right-panel
           #conversation-wrapper
@@ -36,7 +37,7 @@ block content
                         
           // Chatinput 
           #chatinput-wrapper
-            input#chatinput-js
+            input#chatinput-js(value='Please select a user or add a new user to your contactlist', disabled='disabled')
       
       input(type='hidden', id='userId', value='#{userId}')
       input(type='hidden', id='userName', value='#{username}')

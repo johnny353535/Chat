@@ -85,13 +85,16 @@ UserProvider.prototype.findContacts = function(userId, callback) {
 				if(error)
 					callback(error)
 				else {
-					if(user.contacts != undefined) {	// If contacts exist
+					if(user.contacts != undefined) {// If contacts exist
 						async.forEach(user.contacts, function(contact, callbackFE) {
 							if(contact.accepted) {
 								// Accepted, add to the result array
 								user_collection.findOne({
 									_id : user_collection.db.bson_serializer.ObjectID.createFromHexString(contact.contactId.toString())
-								},{ password: 0, contacts: 0 }, function(error, contact) {
+								}, {
+									password : 0,
+									contacts : 0
+								}, function(error, contact) {
 									result.push(contact);
 									callbackFE(error);
 								})
@@ -101,25 +104,9 @@ UserProvider.prototype.findContacts = function(userId, callback) {
 							}
 						}, function(error) { callback(error, result)
 						})
-					} else callback(error, result);
+					} else
+						callback(error, result);
 				}
-			});
-		}
-	});
-};
-
-UserProvider.prototype.addContact = function(userId, contactId, callback) {
-	this.getCollection(function(error, user_collection) {
-		if(error)
-			callback(error)
-		else {
-			user_collection.findOne({
-				_id : userId
-			},{ password: 0, contacts: 0 }, function(error, contact) {
-				if(error)
-					callback(error)
-				else
-					callback(null, contact)
 			});
 		}
 	});
@@ -133,8 +120,13 @@ UserProvider.prototype.findUsers = function(username, callback) {
 			callback(error)
 		else {
 			user_collection.find({
-				username : {$regex : username+".*"} ,
-			}, { password : 0, contacts: 0 }).toArray(function(error, results) {
+				username : {
+					$regex : username + ".*"
+				} ,
+			}, {
+				password : 0,
+				contacts : 0
+			}).toArray(function(error, results) {
 				if(error) {
 					callback(error);
 				} else {
@@ -142,6 +134,38 @@ UserProvider.prototype.findUsers = function(username, callback) {
 						console.log("Search result: " + results);
 					callback(null, results);
 				}
+			});
+		}
+	});
+};
+// Adds a contact to a user and returns that contact's information
+UserProvider.prototype.addContact = function(userId, contactId, callback) {
+	this.getCollection(function(error, user_collection) {
+		if(error)
+			callback(error)
+		else {
+			user_collection.update({
+				_id : user_collection.db.bson_serializer.ObjectID.createFromHexString(userId)
+			}, {
+				$addToSet : {
+					contacts : {
+						contactId : contactId,
+						accepted : true
+					}
+				}
+			}, function() {
+				user_collection.findOne({
+					_id : user_collection.db.bson_serializer.ObjectID.createFromHexString(contactId)
+				}, {
+					password : 0,
+					contacts : 0
+				}, function(error, contact) {
+					if(error)
+						callback(error)
+					else {
+						callback(null, contact);
+					}
+				});
 			});
 		}
 	});
